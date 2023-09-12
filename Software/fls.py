@@ -8,11 +8,13 @@ import cv2
 class Camera:
     def __init__(self, index) -> None:
         self.camera = cv2.VideoCapture(index)
+        self.encode_params = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
         logging.info("Camera inited")
 
     def get_jpeg_image_bytes(self):
         ret, img = self.camera.read()
-        return cv2.imencode('.jpg', img)[1].tobytes()
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        return cv2.imencode('.jpg', img, self.encode_params)[1].tobytes()
 
 
 app = Flask(__name__)
