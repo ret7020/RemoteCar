@@ -2,7 +2,6 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 import cv2
-from PIL import Image
 import argparse
 import logging
 import os
@@ -19,8 +18,40 @@ class Camera:
         self.camera = cv2.VideoCapture(index)
         logging.info("Camera inited")
 
+    def get_jpeg_image_bytes(self):
+        ret, img = self.camera.read()
+        return cv2.imencode('.jpg', img)[1].tobytes()
+
+
+class ImageWebSocket(tornado.websocket.WebSocketHandler):
+    clients = set()
+
+    def check_origin(self, origin):
+        # Allow access from every origin
+        return True
+
+    def open(self):
+        ImageWebSocket.clients.add(self)
+        logging.info("WebSocket opened from: " + self.request.remote_ip)
+
+    def on_message(self, message):
+        jpeg_bytes = camera.get_jpeg_image_bytes()
+        self.write_message(jpeg_bytes, binary=True)
+
+    def on_close(self):
+        ImageWebSocket.clients.remove(self)
+        logging.info("WebSocket closed from: " + self.request.remote_ip)
+
 
 if __name__ == "__main__":
     script_path = os.path.dirname(os.path.realpath(__file__))
     static_path = script_path + '/static/'
     camera = Camera(args.camera)
+
+    app = tornado.web.Application([
+        (r"/websocket", ImageWebSocket),
+        (r"/(.*)", tornado.web.StaticFileHandler, {'path': static_path, 'default_filename': 'index.html'}),
+    ])
+    app.listen(args.port)
+    logging.info(f"Starting server: http://{args.host}:{args.port}")
+    tornado.ioloop.IOLoop.current().start()

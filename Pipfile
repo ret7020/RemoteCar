@@ -4,9 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-opencv-python = "*"
 tornado = "*"
-pillow = "*"
+opencv-python = "*"
 
 [dev-packages]
 
