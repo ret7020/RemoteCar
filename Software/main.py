@@ -5,6 +5,7 @@ import cv2
 import argparse
 import logging
 import os
+import threading
 
 logging.basicConfig(level=logging.INFO)
 parser = argparse.ArgumentParser(description='Run Software on SBC')
@@ -35,8 +36,7 @@ class ImageWebSocket(tornado.websocket.WebSocketHandler):
         logging.info("WebSocket opened from: " + self.request.remote_ip)
 
     def on_message(self, message):
-        jpeg_bytes = camera.get_jpeg_image_bytes()
-        self.write_message(jpeg_bytes, binary=True)
+        threading.Thread(target=lambda: self.write_message(camera.get_jpeg_image_bytes(), binary=True)).start()
 
     def on_close(self):
         ImageWebSocket.clients.remove(self)
