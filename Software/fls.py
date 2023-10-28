@@ -4,8 +4,10 @@ import logging
 import cv2
 import numpy as np
 # import threading
-# import time
-
+import time
+import sys
+import gzip
+import base64
 
 class Camera:
     def __init__(self, index) -> None:
@@ -17,7 +19,9 @@ class Camera:
     def get_jpeg_image_bytes(self):
         ret, img = self.camera.read()
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        return cv2.imencode('.jpg', img, self.encode_params)[1].tobytes()
+        res = cv2.imencode('.jpg', img, self.encode_params)[1].tobytes()
+        res = gzip.compress(res)
+        return res
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
