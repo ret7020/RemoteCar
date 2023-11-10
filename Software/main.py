@@ -1,57 +1,47 @@
-import tornado.ioloop
-import tornado.web
-import tornado.websocket
-import cv2
-import argparse
+from flask import Flask, render_template
+from flask_sock import Sock
 import logging
-import os
-import threading
-
-logging.basicConfig(level=logging.INFO)
-parser = argparse.ArgumentParser(description='Run Software on SBC')
-parser.add_argument('--port', default=8888, type=int, help='Web server port (default: 8888)')
-parser.add_argument('--host', default="0.0.0.0", type=str, help='Web server host (default: 0.0.0.0 - listen for all)')
-parser.add_argument('--camera', default=0, type=int, help='Camera index to read from (default: 0)')
-args = parser.parse_args()
+import cv2
+import numpy as np
+# import threading
+import time
+import sys
+import gzip
+import base64
 
 class Camera:
     def __init__(self, index) -> None:
         self.camera = cv2.VideoCapture(index)
+        self.encode_params = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
+        self.image = cv2.imencode('.jpg', np.zeros((480, 640)), self.encode_params)[1].tobytes()
         logging.info("Camera inited")
 
     def get_jpeg_image_bytes(self):
         ret, img = self.camera.read()
-        return cv2.imencode('.jpg', img)[1].tobytes()
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        res = cv2.imencode('.jpg', img, self.encode_params)[1].tobytes()
+        #res = gzip.compress(res)
+        return res
+
+app = Flask(__name__)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+
+sock = Sock(app)
+camera = Camera(0)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 
-class ImageWebSocket(tornado.websocket.WebSocketHandler):
-    clients = set()
-
-    def check_origin(self, origin):
-        # Allow access from every origin
-        return True
-
-    def open(self):
-        ImageWebSocket.clients.add(self)
-        logging.info("WebSocket opened from: " + self.request.remote_ip)
-
-    def on_message(self, message):
-        threading.Thread(target=lambda: self.write_message(camera.get_jpeg_image_bytes(), binary=True)).start()
-
-    def on_close(self):
-        ImageWebSocket.clients.remove(self)
-        logging.info("WebSocket closed from: " + self.request.remote_ip)
+@app.route('/api/control', methods=['POST'])
+def api_manual_control():
+    pass
 
 
-if __name__ == "__main__":
-    script_path = os.path.dirname(os.path.realpath(__file__))
-    static_path = script_path + '/static/'
-    camera = Camera(args.camera)
-
-    app = tornado.web.Application([
-        (r"/websocket", ImageWebSocket),
-        (r"/(.*)", tornado.web.StaticFileHandler, {'path': static_path, 'default_filename': 'index.html'}),
-    ])
-    app.listen(args.port)
-    logging.info(f"Starting server: http://{args.host}:{args.port}")
-    tornado.ioloop.IOLoop.current().start()
+@sock.route('/image')
+def stream(sock):
+    logging.error("Stream started")
+    while True:
+        sock.send(camera.get_jpeg_image_bytes())
+        
