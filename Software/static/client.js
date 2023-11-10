@@ -6,6 +6,6 @@ ws.binaryType = 'arraybuffer';
 var data;
 ws.onmessage = (evt) => {
 	data = new Uint8Array(evt.data);
-	//data = pako.ungzip(data);
+	data = pako.ungzip(data);
 	img.src = window.URL.createObjectURL(new Blob([data], { type: "image/jpeg" }));
 }
