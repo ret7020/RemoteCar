@@ -46,7 +46,8 @@ void loop(){
     String command_arg_1 = getValue(command,';',2);
     String command_arg_2 = getValue(command,';',3);
     if (command_id == 0){ // Set
-      motors[command_arg_0] = command_arg_1; 
+      motors[command_arg_0.toInt()].setSpeed(command_arg_1.toInt()); 
+      motors[command_arg_0.toInt()].run(FORWARD);
       
     }
 
