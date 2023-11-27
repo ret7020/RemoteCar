@@ -5,6 +5,7 @@ AF_DCMotor motor_1(2);
 AF_DCMotor motor_2(3);
 AF_DCMotor motor_3(4);
 String command;
+AF_DCMotor motors[4] = {motor_0, motor_1, motor_2, motor_3};
 
 String getValue(String data, char separator, int index)
 {
@@ -45,6 +46,7 @@ void loop(){
     String command_arg_1 = getValue(command,';',2);
     String command_arg_2 = getValue(command,';',3);
     if (command_id == 0){ // Set
+      motors[command_arg_0] = command_arg_1; 
       
     }
 
