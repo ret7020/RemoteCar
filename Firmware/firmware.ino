@@ -1,3 +1,7 @@
+/*
+Firmware source code for IRC - Internet Remote Car
+*/
+
 #include <AFMotor.h> 
 
 AF_DCMotor motor_0(1);
