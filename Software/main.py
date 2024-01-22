@@ -3,11 +3,10 @@ from flask_sock import Sock
 import logging
 import cv2
 import numpy as np
+import serial
 # import threading
 import time
-import sys
-import gzip
-import base64
+
 
 class Camera:
     def __init__(self, index) -> None:
@@ -19,19 +18,25 @@ class Camera:
     def get_jpeg_image_bytes(self):
         ret, img = self.camera.read()
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        res = cv2.imencode('.jpg', img, self.encode_params)[1].tobytes()
-        #res = gzip.compress(res)
-        return res
+        return cv2.imencode('.jpg', img, self.encode_params)[1].tobytes()
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.serial = serial.Serial("/dev/ttyACM0", 115200)
 
 sock = Sock(app)
-camera = Camera(0)
+#camera = Camera(0)
 
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/api/forward')
+def forward():
+    app.serial.write(b"1;100;0\n")
+    time.sleep(0.3)
+    app.serial.write(b"1;0;0\n")
+    return  "OK"
 
 
 @app.route('/api/control', methods=['POST'])
@@ -44,4 +49,7 @@ def stream(sock):
     logging.error("Stream started")
     while True:
         sock.send(camera.get_jpeg_image_bytes())
-        
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8080, debug=False)
